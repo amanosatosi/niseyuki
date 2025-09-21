@@ -74,19 +74,19 @@ jobs:
         shell: pwsh
         run: |
           $out = "${{ env.BUILD_DIR }}\${{ env.CONFIG }}"
-          $txt = @"
-Niseyuki — third-party notices
-
-FFmpeg (LGPL v2.1+ / GPL parts if used)
-https://ffmpeg.org/
-
-Qt (LGPL/GPL/commercial, see Qt licensing)
-https://www.qt.io/
-
-Default notification sounds © Maoudamashii (魔王魂) — CC BY 4.0
-https://maou.audio/
-"@
-          Set-Content -Path "$out\THIRD_PARTY_NOTICES.txt" -Value $txt -Encoding UTF8
+          $lines = @(
+            'Niseyuki — third-party notices',
+            '',
+            'FFmpeg (LGPL v2.1+ / GPL parts if used)',
+            'https://ffmpeg.org/',
+            '',
+            'Qt (LGPL/GPL/commercial, see Qt licensing)',
+            'https://www.qt.io/',
+            '',
+            'Default notification sounds © Maoudamashii (魔王魂) — CC BY 4.0',
+            'https://maou.audio/'
+          )
+          Set-Content -Path "$out\THIRD_PARTY_NOTICES.txt" -Value $lines -Encoding UTF8
 
       - name: Package artifact (zip)
         shell: pwsh
