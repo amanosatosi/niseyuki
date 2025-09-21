@@ -37,4 +37,9 @@ qt_add_resources(niseyuki "sfx"
 
 target_include_directories(niseyuki PRIVATE src)
 
+target_link_libraries(niseyuki PRIVATE
+    Qt6::Widgets
+    Qt6::Multimedia
+)
+
 qt_finalize_executable(niseyuki)

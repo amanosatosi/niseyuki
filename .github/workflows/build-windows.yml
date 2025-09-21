@@ -22,7 +22,7 @@ jobs:
           version: '6.6.2'
           host: 'windows'
           arch: 'win64_msvc2019_64'
-          modules: 'qtmultimedia'
+          modules: 'qtbase qtwidgets qtmultimedia'
 
       - name: Configure CMake
         run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64
