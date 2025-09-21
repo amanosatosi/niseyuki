@@ -2,6 +2,8 @@
 
 #include <QDir>
 #include <QFileInfo>
+#include <QPoint>
+#include <QSize>
 #include <QString>
 #include <QStringList>
 #include <QVector>
