@@ -1,0 +1,112 @@
+name: Build (Windows) — Niseyuki
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    env:
+      BUILD_DIR: build
+      CONFIG: Release
+      APP_NAME: Niseyuki
+      # FFmpeg major we want:
+      FFMPEG_RELEASE_TAG: "n8.0"   # FFmpeg 8.0 release branch
+      FFMPEG_MATCH: "win64-lgpl-shared.zip"  # Qt app uses shared DLLs; LGPL-only is simpler
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install Qt 6 (qtbase + qtmultimedia)
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: 6.5.3
+          modules: qtbase qtmultimedia
+
+      - name: Configure CMake
+        run: cmake -S . -B ${{ env.BUILD_DIR }} -DCMAKE_BUILD_TYPE=${{ env.CONFIG }}
+
+      - name: Build
+        run: cmake --build ${{ env.BUILD_DIR }} --config ${{ env.CONFIG }} --parallel
+
+      # === Bundle Qt runtime (windeployqt) ===
+      - name: Deploy Qt runtime
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem "${{ env.BUILD_DIR }}\${{ env.CONFIG }}\*.exe" | Select-Object -First 1
+          if (-not $exe) { throw "Executable not found in build output." }
+          & "${{ env.Qt6_DIR }}\bin\windeployqt.exe" --no-quick-import \
+            --no-translations --no-system-d3d-compiler --no-opengl-sw `
+            --compiler-runtime "$($exe.FullName)"
+
+      # === Download FFmpeg 8.0 (Windows x64, LGPL, shared) ===
+      - name: Download FFmpeg (8.0 win64 lgpl shared)
+        shell: pwsh
+        run: |
+          $api = "https://api.github.com/repos/BtbN/FFmpeg-Builds/releases"
+          $releases = Invoke-RestMethod $api
+          $asset = $releases.assets + ($releases | ForEach-Object { $_.assets }) `
+            | Where-Object { $_ -and $_.name -match "${{ env.FFMPEG_RELEASE_TAG }}" -and $_.name -match "${{ env.FFMPEG_MATCH }}" } `
+            | Select-Object -First 1
+          if (-not $asset) { throw "Could not find FFmpeg asset for tag ${{ env.FFMPEG_RELEASE_TAG }} matching ${{ env.FFMPEG_MATCH }}" }
+          echo "FFmpeg asset: $($asset.name)"
+          Invoke-WebRequest -Uri $asset.browser_download_url -OutFile ffmpeg.zip
+          Expand-Archive ffmpeg.zip -DestinationPath ffmpeg -Force
+          # Find ffmpeg.exe/ffprobe.exe inside extracted tree
+          $ffmpegExe = Get-ChildItem -Recurse ffmpeg -Filter ffmpeg.exe | Select-Object -First 1
+          $ffprobeExe = Get-ChildItem -Recurse ffmpeg -Filter ffprobe.exe | Select-Object -First 1
+          if (-not $ffmpegExe -or -not $ffprobeExe) { throw "FFmpeg binaries not found in ZIP." }
+          Copy-Item $ffmpegExe.FullName "${{ env.BUILD_DIR }}\${{ env.CONFIG }}\" -Force
+          Copy-Item $ffprobeExe.FullName "${{ env.BUILD_DIR }}\${{ env.CONFIG }}\" -Force
+
+      # === Copy SFX into output dir ===
+      - name: Copy SFX
+        shell: pwsh
+        run: |
+          $out = "${{ env.BUILD_DIR }}\${{ env.CONFIG }}\sfx"
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+          # Support wav/ogg if present
+          Get-ChildItem audio -Include *.wav,*.ogg -Recurse | ForEach-Object {
+            Copy-Item $_.FullName $out -Force
+          }
+
+      # === Bundle licenses & credits ===
+      - name: Add third-party notices
+        shell: pwsh
+        run: |
+          $out = "${{ env.BUILD_DIR }}\${{ env.CONFIG }}"
+          @"
+Niseyuki — third-party notices
+
+FFmpeg (LGPL v2.1+ / GPL parts if used)
+https://ffmpeg.org/
+
+Qt (LGPL/GPL/commercial, see Qt licensing)
+https://www.qt.io/
+
+Default notification sounds © Maoudamashii (魔王魂) — CC BY 4.0
+https://maou.audio/
+"@ | Out-File -Encoding UTF8 "$out\THIRD_PARTY_NOTICES.txt"
+
+      # === Zip portable artifact ===
+      - name: Package artifact (zip)
+        shell: pwsh
+        run: |
+          $src = "${{ env.BUILD_DIR }}\${{ env.CONFIG }}"
+          $zip = "${{ env.APP_NAME }}-windows-x64.zip"
+          Compress-Archive -Path "$src\*" -DestinationPath $zip -Force
+          echo "Created $zip"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: niseyuki-windows-x64
+          path: "*.zip"
