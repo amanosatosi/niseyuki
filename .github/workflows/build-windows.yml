@@ -1,3 +1,4 @@
+ codex/develop-native-desktop-gui-for-niseyuki-w1ymqe
 name: Build (Windows)
 
 on:
@@ -7,10 +8,30 @@ on:
 jobs:
   build:
     runs-on: windows-latest
+
+name: Build (Windows) — Niseyuki
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    env:
+      BUILD_DIR: build
+      CONFIG: Release
+      APP_NAME: Niseyuki
+
+ main
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+ codex/develop-native-desktop-gui-for-niseyuki-w1ymqe
       - name: Set up MSVC environment
         uses: ilammy/msvc-dev-cmd@v1
         with:
@@ -29,3 +50,88 @@ jobs:
 
       - name: Build
         run: cmake --build build --config Release
+
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install Qt 6 (qtmultimedia)
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: 6.5.3
+          modules: qtmultimedia
+
+      - name: Configure CMake
+        run: cmake -S . -B ${{ env.BUILD_DIR }} -DCMAKE_BUILD_TYPE=${{ env.CONFIG }}
+
+      - name: Build
+        run: cmake --build ${{ env.BUILD_DIR }} --config ${{ env.CONFIG }} --parallel
+
+      - name: Find built EXE
+        id: findexe
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem "${{ env.BUILD_DIR }}\${{ env.CONFIG }}\*.exe" | Select-Object -First 1
+          if (-not $exe) { throw "Executable not found in build output." }
+          echo "exe_path=$($exe.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Deploy Qt runtime (windeployqt)
+        shell: pwsh
+        run: |
+          $wqt = (Get-Command windeployqt.exe -ErrorAction Stop).Path
+          & $wqt --no-quick-import --no-translations --no-system-d3d-compiler --no-opengl-sw "${{ steps.findexe.outputs.exe_path }}"
+
+      # ---- FFmpeg: simplest reliable way is Chocolatey (LGPL shared) ----
+      - name: Install FFmpeg (Chocolatey)
+        shell: pwsh
+        run: |
+          choco install ffmpeg -y --no-progress
+          $ffbin = Get-ChildItem "C:\ProgramData\chocolatey\lib\ffmpeg" -Recurse -Include ffmpeg.exe | Select-Object -First 1
+          $fpbin = Get-ChildItem "C:\ProgramData\chocolatey\lib\ffmpeg" -Recurse -Include ffprobe.exe | Select-Object -First 1
+          if (-not $ffbin -or -not $fpbin) { throw "FFmpeg binaries not found via Chocolatey." }
+          Copy-Item $ffbin.FullName "${{ env.BUILD_DIR }}\${{ env.CONFIG }}\" -Force
+          Copy-Item $fpbin.FullName "${{ env.BUILD_DIR }}\${{ env.CONFIG }}\" -Force
+
+      - name: Copy SFX into output dir
+        shell: pwsh
+        run: |
+          $out = "${{ env.BUILD_DIR }}\${{ env.CONFIG }}\sfx"
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+          if (Test-Path "audio") {
+            Get-ChildItem audio -Include *.wav,*.ogg -Recurse | ForEach-Object {
+              Copy-Item $_.FullName $out -Force
+            }
+          }
+
+      - name: Add third-party notices
+        shell: pwsh
+        run: |
+          $out = "${{ env.BUILD_DIR }}\${{ env.CONFIG }}"
+          $txt = @"
+Niseyuki — third-party notices
+
+FFmpeg (LGPL v2.1+ / GPL parts if used)
+https://ffmpeg.org/
+
+Qt (LGPL/GPL/commercial, see Qt licensing)
+https://www.qt.io/
+
+Default notification sounds © Maoudamashii (魔王魂) — CC BY 4.0
+https://maou.audio/
+"@
+          Set-Content -Path "$out\THIRD_PARTY_NOTICES.txt" -Value $txt -Encoding UTF8
+
+      - name: Package artifact (zip)
+        shell: pwsh
+        run: |
+          $src = "${{ env.BUILD_DIR }}\${{ env.CONFIG }}"
+          $zip = "${{ env.APP_NAME }}-windows-x64.zip"
+          if (Test-Path $zip) { Remove-Item $zip -Force }
+          Compress-Archive -Path "$src\*" -DestinationPath $zip -Force
+          echo "Created $zip"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: niseyuki-windows-x64
+          path: "*.zip"
+ main
