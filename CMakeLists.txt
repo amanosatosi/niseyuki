@@ -37,4 +37,12 @@ qt_add_resources(niseyuki "sfx"
 
 target_include_directories(niseyuki PRIVATE src)
 
+ codex/develop-native-desktop-gui-for-niseyuki-w1ymqe
+target_link_libraries(niseyuki PRIVATE
+    Qt6::Widgets
+    Qt6::Multimedia
+)
+
+
+ main
 qt_finalize_executable(niseyuki)

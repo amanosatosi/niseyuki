@@ -1,3 +1,14 @@
+ codex/develop-native-desktop-gui-for-niseyuki-w1ymqe
+name: Build (Windows)
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
 name: Build (Windows) — Niseyuki
 
 on:
@@ -15,9 +26,30 @@ jobs:
       CONFIG: Release
       APP_NAME: Niseyuki
 
+ main
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+ codex/develop-native-desktop-gui-for-niseyuki-w1ymqe
+      - name: Set up MSVC environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Install Qt 6
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: '6.6.2'
+          host: 'windows'
+          arch: 'win64_msvc2019_64'
+          modules: 'qtmultimedia'
+
+      - name: Configure CMake
+        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+
+      - name: Build
+        run: cmake --build build --config Release
 
       - name: Set up MSVC
         uses: ilammy/msvc-dev-cmd@v1
@@ -102,3 +134,4 @@ https://maou.audio/
         with:
           name: niseyuki-windows-x64
           path: "*.zip"
+ main
