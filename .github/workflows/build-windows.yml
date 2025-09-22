@@ -1,4 +1,4 @@
-name: Build (Windows) — Niseyuki
+name: Build (Windows)
 
 on:
   push:
@@ -28,7 +28,6 @@ jobs:
           version: '6.5.3'
           modules: 'qtbase qtmultimedia'
 
-      # Use the VS generator so /Release exists (simpler packaging)
       - name: Configure CMake (MSVC generator)
         run: cmake -S . -B ${{ env.BUILD_DIR }} -G "Visual Studio 17 2022" -A x64
 
@@ -50,8 +49,7 @@ jobs:
           $wqt = (Get-Command windeployqt.exe -ErrorAction Stop).Path
           & $wqt --no-quick-import --no-translations --no-system-d3d-compiler --no-opengl-sw "${{ steps.findexe.outputs.exe_path }}"
 
-      # FFmpeg via Chocolatey (LGPL shared build on the runner)
-      - name: Install FFmpeg
+      - name: Install FFmpeg (Chocolatey)
         shell: pwsh
         run: |
           choco install ffmpeg -y --no-progress
@@ -76,18 +74,17 @@ jobs:
         shell: pwsh
         run: |
           $out = "${{ steps.findexe.outputs.out_dir }}"
-          @"
-Niseyuki — third-party notices
-
-FFmpeg (LGPL v2.1+ / GPL parts if used)
-https://ffmpeg.org/
-
-Qt (LGPL/GPL/commercial, see Qt licensing)
-https://www.qt.io/
-
-Default notification sounds © Maoudamashii (魔王魂) — CC BY 4.0
-https://maou.audio/
-"@ | Out-File -Encoding UTF8 "$out\THIRD_PARTY_NOTICES.txt"
+          $f = Join-Path $out "THIRD_PARTY_NOTICES.txt"
+          "Niseyuki — third-party notices" | Out-File $f -Encoding UTF8
+          "" | Out-File $f -Append
+          "FFmpeg (LGPL v2.1+ / GPL parts if used)" | Out-File $f -Append
+          "https://ffmpeg.org/" | Out-File $f -Append
+          "" | Out-File $f -Append
+          "Qt (LGPL/GPL/commercial, see Qt licensing)" | Out-File $f -Append
+          "https://www.qt.io/" | Out-File $f -Append
+          "" | Out-File $f -Append
+          "Default notification sounds © Maoudamashii (魔王魂) — CC BY 4.0" | Out-File $f -Append
+          "https://maou.audio/" | Out-File $f -Append
 
       - name: Package artifact (zip)
         shell: pwsh
@@ -96,7 +93,7 @@ https://maou.audio/
           $zip = "${{ env.APP_NAME }}-windows-x64.zip"
           if (Test-Path $zip) { Remove-Item $zip -Force }
           Compress-Archive -Path "$src\*" -DestinationPath $zip -Force
-          "Created $zip"
+          Write-Host "Created $zip"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
