@@ -2,11 +2,9 @@
 
 #include <QDir>
 #include <QFileInfo>
- codex/develop-native-desktop-gui-for-niseyuki-w1ymqe
 #include <QPoint>
 #include <QSize>
 
- main
 #include <QString>
 #include <QStringList>
 #include <QVector>
