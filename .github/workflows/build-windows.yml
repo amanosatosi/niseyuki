@@ -22,11 +22,11 @@ jobs:
       - name: Set up MSVC (VS2022)
         uses: ilammy/msvc-dev-cmd@v1
 
-      - name: Install Qt 6 (qtbase + qtmultimedia)
+      - name: Install Qt 6 (qtmultimedia module)
         uses: jurplel/install-qt-action@v4
         with:
           version: '6.5.3'
-          modules: 'qtbase qtmultimedia'
+          modules: 'qtmultimedia'
 
       - name: Configure CMake (MSVC generator)
         run: cmake -S . -B ${{ env.BUILD_DIR }} -G "Visual Studio 17 2022" -A x64
