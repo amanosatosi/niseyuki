@@ -525,7 +525,8 @@ qint64 Encoder::probeDurationMs(const QString &videoPath, const QString &ffprobe
 
 void Encoder::emitWarning(const QString &message) const
 {
-    emit messageReceived(QStringLiteral("[warn] %1").arg(message));
+    auto *self = const_cast<Encoder *>(this);
+    emit self->messageReceived(QStringLiteral("[warn] %1").arg(message));
 }
 
 bool Encoder::parseProgressLine(const QByteArray &line)
@@ -654,3 +655,4 @@ bool Encoder::parseProgressLine(const QByteArray &line)
 
     return handled;
 }
+
