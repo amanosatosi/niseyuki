@@ -4,6 +4,8 @@
 
 #include <QObject>
 #include <QProcess>
+#include <QString>
+#include <QStringList>
 
 class Encoder : public QObject
 {
@@ -38,11 +40,21 @@ private slots:
 
 private:
     QStringList buildFfmpegArguments(const EncodeJob &job) const;
-    void parseProgressLine(const QByteArray &line);
+    bool parseProgressLine(const QByteArray &line);
+    QString resolveFfmpegExecutable() const;
+    QString resolveFfprobeExecutable() const;
+    QString resolveExecutable(const QString &program) const;
+    qint64 probeDurationMs(const QString &videoPath, const QString &ffprobePath) const;
+    QStringList buildVideoFilters(const EncodeJob &job) const;
+    QStringList buildAudioFilters(const EncodeJob &job) const;
+    void emitWarning(const QString &message) const;
 
     QProcess m_process;
     EncodeJob m_currentJob;
     State m_state = State::Idle;
     double m_progress = 0.0;
     QString m_statusText;
+    QString m_ffmpegPath;
+    QString m_ffprobePath;
+    qint64 m_totalDurationMs = 0;
 };

@@ -18,7 +18,7 @@ struct SubtitleInfo {
 struct IntroOutroInfo {
     QString introPath;
     QString outroPath;
-    QString logoPath;
+    QString thumbnailPath;
 };
 
 struct AudioSettings {
@@ -58,6 +58,7 @@ struct EncodeJob {
     QString videoPath;
     QString subtitlePath;
     SubtitleInfo subtitleInfo;
+    QStringList additionalSubtitles;
     IntroOutroInfo introOutroInfo;
     AudioSettings audioSettings;
     VideoSettings videoSettings;
@@ -67,6 +68,7 @@ struct EncodeJob {
     bool telegramMode = false;
     QString outputFile;
     QString globalOutputFolder;
+    qint64 durationMs = 0;
 
     QString resolvedOutputPath() const;
 };
